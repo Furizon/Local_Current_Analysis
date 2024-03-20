@@ -18,7 +18,7 @@ YITA = 0.0001;
 
 
 %%%%%%%%%%%%%%%%%%%%%主函数部分%%%%%%%%%%%%%%%%%%%%%%%
-nx = 20;
+nx = 12;
 ny = 5;
 t = 1.0;
 e = 0.01;
@@ -242,16 +242,16 @@ end
 function Plot_Local_Current(coordinatesX, coordinatesY, LocalCurrent)
     scatter(coordinatesX, coordinatesY);
     hold on;
+    totalCurrentX = zeros(1, size(coordinatesX, 2));
+    totalCurrentY = zeros(1, size(coordinatesX, 2));
     for i  = 1:size(coordinatesX, 2)
-        Inout1x(i)=0; Inout1y(i)=0;
+       
         for j = 1:size(coordinatesX, 2)
-        
-            aph=angle(coordinatesX(j)-coordinatesX(i)+1i*(coordinatesY(j)-coordinatesY(i)));
-        
-            Inout1x(i)=Inout1x(i) + real(LocalCurrent(i,j))*cos(aph);
-            Inout1y(i)=Inout1y(i) + real(LocalCurrent(i,j))*sin(aph);
+            arc = atan2(coordinatesY(1, j) - coordinatesY(1, i), coordinatesX(1, j) - coordinatesX(1, i));
+            totalCurrentX(1, i) = totalCurrentX(1, i) + real(LocalCurrent(i, j)) * cos(arc);
+            totalCurrentY(1, i) = totalCurrentY(1, i) + real(LocalCurrent(i, j)) * sin(arc);
         
         end
     end
-    quiver(coordinatesX, coordinatesY, Inout1x, Inout1y);
+    quiver(coordinatesX, coordinatesY, totalCurrentX, totalCurrentY);
 end
