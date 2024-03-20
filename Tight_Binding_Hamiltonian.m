@@ -1,5 +1,18 @@
-function [coordinatesX, coordinatesY, H0, Hv, HvHD] = tight_binding_hamiltonian(nx, ny, t)
-    % 自旋轨道耦合
+%%%%%%%%%%%%%%%%%%%%%%%计算体系局域电流%%%%%%%%%%%%%%%%%%%%
+% 同时会保存局域电流为DFTB的形式
+% ------------------------参数--------------------------%
+% nx 纳米带宽度
+% ny 纳米带长度
+% t Hopping系数
+% ------------------------返回--------------------------%
+% coordinatesX 
+% coordinatesY
+% H0
+% Hv
+% HvHD
+
+function [coordinatesX, coordinatesY, H0, Hv, HvHD] = Tight_Binding_Hamiltonian(nx, ny, t)
+    % 自旋轨道耦合    
     ldSO = 0.1 * t;
     % 光场项
     ldHD = -0.02 * t;      
@@ -34,7 +47,7 @@ function [coordinatesX, coordinatesY, H0, Hv, HvHD] = tight_binding_hamiltonian(
 
             if distances(i, j) > 0.1 && distances(i, j) < 1.1
                 H0(i, j) = t;
-            elseif distances(i, j) < 2.1
+            elseif distances(i, j) > 1.1 && distances(i, j) < 2.1
                 Hv(i, j) = ldSO / (3 * sqrt(3));
                 HvHD(i, j) = ldHD / (3 * sqrt(3));
             end
@@ -60,8 +73,8 @@ function [coordinatesX, coordinatesY, H0, Hv, HvHD] = tight_binding_hamiltonian(
                     end
                 end
             end
-            Hv(i, j) = Hv(i, j) * vCoefficient * 1j;
-            HvHD(i, j) = HvHD(i, j) * vCoefficient * 1j;
+            Hv(i, j) = Hv(i, j) * vCoefficient * 1i;
+            HvHD(i, j) = HvHD(i, j) * vCoefficient * 1i;
         end
     end
 end
