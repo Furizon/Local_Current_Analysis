@@ -5,13 +5,15 @@
 % ny 纳米带长度
 % t Hopping系数
 % ------------------------返回--------------------------%
-% coordinatesX 
-% coordinatesY
-% H0
-% Hv
-% HvHD
+% coordinatesX 原子X坐标
+% coordinatesY 原子Y坐标
+% H0 基础哈密顿量矩阵
+% Hv 自旋轨道耦合项
+% HvHD Haldane项 描述电子在不同晶格子之间进行跃迁时的相位差
+% H00 磁场作用 上自旋
+% H01 磁场作用 下自旋
 
-function [coordinatesX, coordinatesY, H0, Hv, HvHD] = Tight_Binding_Hamiltonian(nx, ny, t)
+function [coordinatesX, coordinatesY, H0, Hv, HvHD, H00, H01] = Tight_Binding_Hamiltonian(nx, ny, t)
     % 自旋轨道耦合    
     ldSO = 0.1 * t;
     % 光场项
@@ -31,12 +33,13 @@ function [coordinatesX, coordinatesY, H0, Hv, HvHD] = Tight_Binding_Hamiltonian(
         end
     end
 
-    % 生成基本哈密顿量矩阵
+    
     % 总原子数
     totalAtomNum = nx * ny * 4;
-    % 仅跳跃能和座位能的哈密顿矩阵
-    H0 = zeros(totalAtomNum);
     
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % 生成基本哈密顿量矩阵
+    H0 = zeros(totalAtomNum);
     Hv = zeros(totalAtomNum);
     HvHD = zeros(totalAtomNum);
     distances = zeros(totalAtomNum);
@@ -53,7 +56,7 @@ function [coordinatesX, coordinatesY, H0, Hv, HvHD] = Tight_Binding_Hamiltonian(
             end
         end
     end
-
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % 自旋轨道耦合(SOC)和Haldane项
     for i = 1:totalAtomNum
         for j = 1:totalAtomNum
@@ -62,7 +65,7 @@ function [coordinatesX, coordinatesY, H0, Hv, HvHD] = Tight_Binding_Hamiltonian(
                 for k = 1:totalAtomNum
                     % 寻找一个格点k, i和j都是k的最近邻
                     if distances(i, k) > 0 && distances(i, k) < 1.1 && distances(j, k) > 0 && distances(j, k) < 1.1
-                        % 判断相对k来说，j是在i的顺时针方向还是逆时针方向，扩展一维做叉乘
+                        % 判断相对k来说，j是在i的顺时针方向还是逆时针方向，扩展一维做叉乘来判断
                         crossResult = cross([coordinatesX(j) - coordinatesX(k), coordinatesY(j) - coordinatesY(k) , 0], ...
                             [coordinatesX(i) - coordinatesX(k), coordinatesY(i) - coordinatesY(k) , 0]);
                         if crossResult(3) > 0
@@ -76,5 +79,21 @@ function [coordinatesX, coordinatesY, H0, Hv, HvHD] = Tight_Binding_Hamiltonian(
             Hv(i, j) = Hv(i, j) * vCoefficient * 1i;
             HvHD(i, j) = HvHD(i, j) * vCoefficient * 1i;
         end
+    end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % AB效应项还有铁磁项
+    % 铁磁交换场
+    delta = 0.0 * ldSO;   
+    % 反铁磁交换场
+    deltaAB = 0.0 * ldSO;   
+    % AB格点势 同一原胞内不同格点之间相互作用
+    dAB = - 0.0 * ldSO;       
+    
+    deltaR(1:totalAtomNum) = delta;
+    deltaABR(1:totalAtomNum) = deltaAB; 
+    dABR(1:totalAtomNum) = dAB;
+    for i=1:totalAtomNum
+        H00(i, i)= deltaR(i) + dABR(i) * (mod(i, 2) - 0.5)*2 + deltaABR(i) * (mod(i, 2) - 0.5) * 2;
+        H01(i, i)= -deltaR(i) + dABR(i) * (mod(i, 2) - 0.5)*2 - deltaABR(i) * (mod(i, 2) - 0.5) * 2;
     end
 end

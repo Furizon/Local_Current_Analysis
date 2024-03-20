@@ -18,7 +18,7 @@ YITA = 0.0001;
 
 
 %%%%%%%%%%%%%%%%%%%%%主函数部分%%%%%%%%%%%%%%%%%%%%%%%
-nx = 12;
+nx = 20;
 ny = 5;
 t = 1.0;
 e = 0.01;
@@ -26,9 +26,23 @@ e = 0.01;
 [coordinatesX, coordinatesY, H0, Hv, HvHD] = Tight_Binding_Hamiltonian(nx, ny, t);
 
 % 计算局域电流
-[LocalCurrentUpL, LocalCurrentUpR, LocalCurrentDownL, LocalCurrentDownR] = Cal_Local_Current(e, H0, Hv, HvHD, YITA);
+[LocalCurrentUpL, LocalCurrentUpR, LocalCurrentDownL, LocalCurrentDownR] = Cal_Local_Current(e, H0, Hv, HvHD, nx, ny, YITA);
 
-Plot_Local_Current(coordinatesX(41:end-40), coordinatesY(41:end-40), LocalCurrentUpR);
+% 绘图
+subplot(2, 2, 1);
+Plot_Local_Current(coordinatesX(ny * 8 + 1:end- ny * 8), coordinatesY(ny * 8 + 1:end- ny * 8), LocalCurrentUpL);
+title("LocalCurrentUpL");
+subplot(2, 2, 2);
+Plot_Local_Current(coordinatesX(ny * 8 + 1:end- ny * 8), coordinatesY(ny * 8 + 1:end- ny * 8), LocalCurrentUpR);
+title("LocalCurrentUpR")
+subplot(2, 2, 3);
+Plot_Local_Current(coordinatesX(ny * 8 + 1:end- ny * 8), coordinatesY(ny * 8 + 1:end- ny * 8), LocalCurrentDownL);
+title("LocalCurrentDownL")
+subplot(2, 2, 4);
+Plot_Local_Current(coordinatesX(ny * 8 + 1:end- ny * 8), coordinatesY(ny * 8 + 1:end- ny * 8), LocalCurrentDownR);
+title("LocalCurrentDownR")
+
+
 %%%%%%%%%%%%%%%%%%%%%迭代求计算电极自能%%%%%%%%%%%%%%%%%%%%%
 % ------------------------参数--------------------------%
 % ee 能量, 可以为数组
@@ -48,7 +62,6 @@ function SigmaX = Cal_Electrode_Self_Eng(e, Hc, H0, H1, Vxc, yita)
     global SELF_ENG_CONVERGE_MAX_STEPS;
     global SELF_ENG_CONVERGE_LIMIT;
     
-    e = reshape(e, 1, []);
     
     % 用于存储迭代过程中的结果
     alphas = zeros(N, N, SELF_ENG_CONVERGE_MAX_STEPS);
@@ -67,17 +80,17 @@ function SigmaX = Cal_Electrode_Self_Eng(e, Hc, H0, H1, Vxc, yita)
     for i = 1:eLength
         % 迭代计算系数
         for n = 2:SELF_ENG_CONVERGE_MAX_STEPS
-            alphas(:, :, n) = alphas(:, :, n - 1) + beta(:, :, n - 1) * ((e(i) + 1i * yita) * eye(N) - alpha(:, :, n - 1)) \ gamma(:, :, n - 1);
-            alpha(:, :, n) = alpha(:, :, n - 1) + gamma(:, :, n - 1) * ((e(i) + 1i * yita) * eye(N) - alpha(:, :, n - 1)) \ beta(:, :, n - 1) + beta(:, :, n - 1) * ((e(i) + 1i * yita) * eye(N) - alpha(:, :, n - 1)) \ gamma(:, :, n - 1);
-            beta(:, :, n) = beta(:, :, n - 1) * ((e(i) + 1i * yita) * eye(N) - alpha(:, :, n - 1)) \ beta(:, :, n - 1);
-            gamma(:, :, n) = gamma(:, :, n - 1) * ((e(i) + 1i * yita) * eye(N) - alpha(:, :, n - 1)) \ gamma(:, :, n - 1);
+            alphas(:, :, n) = alphas(:, :, n - 1) + beta(:, :, n - 1) * inv((e + 1i * yita) * eye(N) - alpha(:, :, n - 1)) * gamma(:, :, n - 1);
+            alpha(:, :, n) = alpha(:, :, n - 1) + gamma(:, :, n - 1) * inv((e + 1i * yita) * eye(N) - alpha(:, :, n - 1)) * beta(:, :, n - 1) + beta(:, :, n - 1) * inv((e + 1i * yita) * eye(N) - alpha(:, :, n - 1)) * gamma(:, :, n - 1);
+            beta(:, :, n) = beta(:, :, n - 1) * inv((e + 1i * yita) * eye(N) - alpha(:, :, n - 1)) * beta(:, :, n - 1);
+            gamma(:, :, n) = gamma(:, :, n - 1) * inv((e + 1i * yita) * eye(N) - alpha(:, :, n - 1)) * gamma(:, :, n - 1);
             % 判断收敛，若收敛则提前退出
             if sum(abs(alphas(:, :, n) - alphas(:, :, n - 1)), 'all') < SELF_ENG_CONVERGE_LIMIT
                 break;
             end
         end
         % 计算表面格林函数
-        surfaceG = inv((e(i) + 1j * yita) * eye(N) - alphas(:, :, n));
+        surfaceG = inv((e + 1j * yita) * eye(N) - alphas(:, :, n));
 
         % 计算自能 surfaceG \ Vxc = inv(surfaceG) * Vxc
         SigmaX(:, :, i) = Vxc' * surfaceG * Vxc;
@@ -97,7 +110,7 @@ end
 % LocalCurrentUpR 从电极R到L上自旋电流
 % LocalCurrentDownL 从电极L到R下自旋电流
 % LocalCurrentDownR 从电极R到L下自旋电流
-function [LocalCurrentUpL, LocalCurrentUpR, LocalCurrentDownL, LocalCurrentDownR] = Cal_Local_Current(e, H, Hv, HvHD, yita)
+function [LocalCurrentUpL, LocalCurrentUpR, LocalCurrentDownL, LocalCurrentDownR] = Cal_Local_Current(e, H, Hv, HvHD, nx, ny, yita)
     fprintf("***Calculation of Local Current Start***\n");
 
     % 构建哈密顿量
@@ -105,21 +118,32 @@ function [LocalCurrentUpL, LocalCurrentUpR, LocalCurrentDownL, LocalCurrentDownR
     HDown = H - Hv + HvHD;
     
     
-    % 切割矩阵
-    HcUp = HUp(41:end-40, 41:end-40);
-    HcDown = HDown(41:end-40, 41:end-40);
-    Hl0Up = HUp(21:40, 21:40);
-    Hl0Down = HDown(21:40, 21:40);
-    Hr0Up = HUp(end-39:end-20, end-39:end-20);
-    Hr0Down = HDown(end-39:end-20, end-39:end-20);
-    Hl1Up = HUp(1:20, 21:40);
-    Hl1Down = HDown(1:20, 21:40);
-    Hr1Up = HUp(end-19:end, end-39:end-20);
-    Hr1Down = HDown(end-19:end, end-39:end-20);
-    VlcUp = HUp(21:40, 41:200);
-    VlcDown = HDown(21:40, 41:200);
-    VrcUp = HUp(201:220, 41:200);
-    VrcDown = HDown(201:220, 41:200);
+    % 切割矩阵，具体形式如下, '表示转置
+    %+----+----+----+----+----+
+    %|Hl0 |Hl1 |    |    |    |
+    %+----+----+----+----+----+
+    %|Hl1'|Hl0 |Vlc |    |    |
+    %+----+----+----+----+----+
+    %|    |Vrc'|Hc  |Vlc'|    |
+    %+----+----+----+----+----+
+    %|    |    |Vrc |Hr0 |Hr1'|
+    %+----+----+----+----+----+
+    %|    |    |Hc  |Hr1 |Hr0 |
+    %+----+----+----+----+----+
+    HcUp = HUp(ny * 8 + 1:end - (ny * 8), ny * 8 + 1:end - (ny * 8));
+    HcDown = HDown(ny * 8 + 1:end - (ny * 8), ny * 8 + 1:end - (ny * 8));
+    Hl0Up = HUp(ny * 4 + 1:ny * 8, ny * 4 + 1:ny * 8);
+    Hl0Down = HDown(ny * 4 + 1:ny * 8, ny * 4 + 1:ny * 8);
+    Hr0Up = HUp(end - (ny * 8 - 1):end - ny * 4, end - (ny * 8 - 1):end - ny * 4);
+    Hr0Down = HDown(end - (ny * 8 - 1):end - ny * 4, end - (ny * 8 - 1):end - ny * 4);
+    Hl1Up = HUp(1:ny * 4, ny * 4 + 1:ny * 8);
+    Hl1Down = HDown(1:ny * 4, ny * 4 + 1:ny * 8);
+    Hr1Up = HUp(end - (ny * 4 - 1):end, end - (ny * 8 - 1):end - ny * 4);
+    Hr1Down = HDown(end - (ny * 4 - 1):end, end - (ny * 8 - 1):end - ny * 4);
+    VlcUp = HUp(ny * 4 + 1:ny * 8, ny * 8 + 1:end - ny * 8);
+    VlcDown = HDown(ny * 4 + 1:ny * 8, ny * 8 + 1:end - ny * 8);
+    VrcUp = HUp(end - (ny * 8 - 1):end - (ny * 4), ny * 8 + 1:end - ny * 8);
+    VrcDown = HDown(end - (ny * 8 - 1):end - (ny * 4), ny * 8 + 1:end - ny * 8);
 
     M = size(HcUp, 1);
 
@@ -183,7 +207,7 @@ end
 function LocalCurrent = calculate(Hc, GLess)
     LocalCurrent = zeros(size(Hc));
     for i = 1:size(Hc, 1)
-        for j = 1:size(Hc, 2)
+        for j = 1:size(Hc, 1)
             LocalCurrent(i, j) = -1i * (Hc(j, i) * GLess(i, j) - GLess(j, i) * Hc(i, j));
         end
     end
@@ -216,8 +240,6 @@ function Save_Local_Current(path, LocalCurrent)
 end
 
 function Plot_Local_Current(coordinatesX, coordinatesY, LocalCurrent)
-    Inout1x = [];
-    Inout1y = [];
     scatter(coordinatesX, coordinatesY);
     hold on;
     for i  = 1:size(coordinatesX, 2)
