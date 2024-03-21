@@ -128,7 +128,7 @@ function [LocalCurrentUpL, LocalCurrentUpR, LocalCurrentDownL, LocalCurrentDownR
     %+----+----+----+----+----+
     %|    |    |Vrc |Hr0 |Hr1'|
     %+----+----+----+----+----+
-    %|    |    |Hc  |Hr1 |Hr0 |
+    %|    |    |    |Hr1 |Hr0 |
     %+----+----+----+----+----+
     HcUp = HUp(ny * 8 + 1:end - (ny * 8), ny * 8 + 1:end - (ny * 8));
     HcDown = HDown(ny * 8 + 1:end - (ny * 8), ny * 8 + 1:end - (ny * 8));
@@ -238,12 +238,20 @@ function Save_Local_Current(path, LocalCurrent)
     end
     fclose(fid);
 end
-
+%%%%%%%%%%%%%%%%%%%%%%%绘制局域电流%%%%%%%%%%%%%%%%%%%%
+% ------------------------参数--------------------------%
+% coordinatesX 原子坐标X
+% coordinatesY 原子坐标Y
+% LocalCurrent 局域电流
+% ------------------------返回--------------------------%
 function Plot_Local_Current(coordinatesX, coordinatesY, LocalCurrent)
+    % 绘制原子
     scatter(coordinatesX, coordinatesY);
     hold on;
     totalCurrentX = zeros(1, size(coordinatesX, 2));
     totalCurrentY = zeros(1, size(coordinatesX, 2));
+    
+    % 计算每个格点的总电流X, Y分量
     for i  = 1:size(coordinatesX, 2)
        
         for j = 1:size(coordinatesX, 2)
@@ -253,5 +261,6 @@ function Plot_Local_Current(coordinatesX, coordinatesY, LocalCurrent)
         
         end
     end
+    % 画箭头图
     quiver(coordinatesX, coordinatesY, totalCurrentX, totalCurrentY);
 end
